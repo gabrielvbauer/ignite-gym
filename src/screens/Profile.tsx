@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { TouchableOpacity } from "react-native";
-import { Center, ScrollView, VStack, Skeleton, Text, Heading } from "native-base";
+import { Center, ScrollView, VStack, Skeleton, Text, Heading, useToast } from "native-base";
+import * as ImagePicker from 'expo-image-picker'
+import * as FileSystem from 'expo-file-system'
 
 import { ScreenHeader } from "@components/ScreenHeader";
 import { UserPhoto } from "@components/UserPhoto";
@@ -8,9 +10,52 @@ import { Input } from '@components/Input'
 import { Button } from "@components/Button";
 
 const PHOTO_SIZE = 32
+const MAXIMUM_IMAGE_SIZE_IN_MB = 5
 
 export function Profile() {
-  const [isPhotoLoading, setIsPhotoLoading] = useState()
+  const [isPhotoLoading, setIsPhotoLoading] = useState(false)
+  const [userPhoto, setUserPhoto] = useState('https://github.com/gabrielvbauer.png')
+
+  const toast = useToast()
+
+  async function handleSelectUserPhoto() {
+    setIsPhotoLoading(true)
+    try {
+      const selectedPhoto = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 1,
+        aspect: [4, 4],
+        allowsEditing: true,
+        allowsMultipleSelection: false
+      })
+  
+      if (selectedPhoto.canceled) {
+        return
+      }
+  
+      const photoUri = selectedPhoto.assets[0].uri
+      const photoInfo = await FileSystem.getInfoAsync(photoUri)
+
+      if (!photoInfo.exists) {
+        return
+      }
+
+      if(photoInfo.size / 1024 / 1024 > MAXIMUM_IMAGE_SIZE_IN_MB) {
+        toast.show({
+          title: `Esta imagem é muito grande. Escolha uma de até ${MAXIMUM_IMAGE_SIZE_IN_MB}MB.`,
+          placement: 'top',
+          bgColor: 'red.500'
+        })
+        return
+      }
+
+      setUserPhoto(photoUri)
+    } catch (error) {
+      console.log(error)
+    } finally {
+      setIsPhotoLoading(false)
+    }
+  }
 
   return (
     <VStack flex={1}>
@@ -32,13 +77,13 @@ export function Profile() {
                   endColor="gray.400"
                 />
               : <UserPhoto
-                  source={{ uri: "https://github.com/gabrielvbauer.png" }}
+                  source={{ uri: userPhoto }}
                   alt="Foto do usuário"
                   size={PHOTO_SIZE}
                 /> 
           }
 
-          <TouchableOpacity>
+          <TouchableOpacity onPress={handleSelectUserPhoto}>
             <Text color="green.500" fontWeight="bold" fontSize="md" mt={2} mb={8}>
               Alterar foto
             </Text>
