@@ -29,6 +29,7 @@ export function AppRoutes() {
 
   return (
     <Navigator
+      initialRouteName='profile'
       screenOptions={{
         headerShown: false,
         tabBarShowLabel: false,
